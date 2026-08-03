@@ -79,6 +79,8 @@ void Error_Handler(void);
 #define SINAL_3_GPIO_Port GPIOB
 #define SINAL_4_Pin GPIO_PIN_5
 #define SINAL_4_GPIO_Port GPIOB
+#define LED_CAN_Pin GPIO_PIN_6
+#define LED_CAN_GPIO_Port GPIOB
 #define LED_STATUS_EXTERNO_Pin GPIO_PIN_7
 #define LED_STATUS_EXTERNO_GPIO_Port GPIOB
 

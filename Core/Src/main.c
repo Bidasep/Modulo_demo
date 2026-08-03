@@ -40,6 +40,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN PV */
 /*DEFINIÇAO DE VARIAVES */
@@ -78,11 +79,13 @@
 	uint32_t tempoDebounceBotao4 = 0;
 	uint32_t tempoLedStatus = 0;
 
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_CAN_Init(void);
 /* USER CODE BEGIN PFP */
 
 /*FUNCOES */
@@ -135,61 +138,31 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_CAN_Init();
   /* USER CODE BEGIN 2 */
   /*DEFINE AS INICIALIZAÇÕES DOS GPIOS*/
 
+
   /*DEFINE O BUZZER COMO LOW*/
-  HAL_GPIO_WritePin(
-      BUZZER_GPIO_Port,
-      BUZZER_Pin,
-      GPIO_PIN_RESET
-  );
+  HAL_GPIO_WritePin(BUZZER_GPIO_Port,BUZZER_Pin,GPIO_PIN_RESET);
 
   /*LED DE ENERGIA*/
-  HAL_GPIO_WritePin(
-      LED_POWER_GPIO_Port,
-      LED_POWER_Pin,
-      GPIO_PIN_RESET
-  );
+  HAL_GPIO_WritePin(LED_POWER_GPIO_Port,LED_POWER_Pin,GPIO_PIN_RESET);
 
-  	 /*STATUS */
-  HAL_GPIO_WritePin(
-      LED_STATUS_GPIO_Port,
-      LED_STATUS_Pin,
-      GPIO_PIN_SET
-  );
+  /*STATUS */
+  HAL_GPIO_WritePin(LED_STATUS_GPIO_Port,LED_STATUS_Pin,GPIO_PIN_SET);
   /*LED EXTERNO*/
-  HAL_GPIO_WritePin(
-      LED_STATUS_EXTERNO_GPIO_Port,
-      LED_STATUS_EXTERNO_Pin,
-      GPIO_PIN_SET
-  );
+  HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port,LED_STATUS_EXTERNO_Pin,GPIO_PIN_SET);
 
 
   /*FORÇA O  SINAL_1 COMEÇAR EM ZERO*/
-  HAL_GPIO_WritePin(
-      SINAL_1_GPIO_Port,
-      SINAL_1_Pin,
-      GPIO_PIN_RESET
-  );
+  HAL_GPIO_WritePin(SINAL_1_GPIO_Port,SINAL_1_Pin,GPIO_PIN_RESET);
   /*FORÇA O  SINAL_2 COMEÇAR EM ZERO*/
-  HAL_GPIO_WritePin(
-      SINAL_2_GPIO_Port,
-      SINAL_2_Pin,
-      GPIO_PIN_RESET
-  );
+  HAL_GPIO_WritePin(SINAL_2_GPIO_Port,SINAL_2_Pin,GPIO_PIN_RESET);
   /*FORÇA O  SINAL_3 COMEÇAR EM ZERO*/
-  HAL_GPIO_WritePin(
-      SINAL_3_GPIO_Port,
-      SINAL_3_Pin,
-      GPIO_PIN_RESET
-  );
+  HAL_GPIO_WritePin( SINAL_3_GPIO_Port,SINAL_3_Pin,GPIO_PIN_RESET);
   /*FORÇA O  SINAL_4 COMEÇAR EM ZERO*/
-  HAL_GPIO_WritePin(
-      SINAL_4_GPIO_Port,
-      SINAL_4_Pin,
-      GPIO_PIN_RESET
-  );
+  HAL_GPIO_WritePin(SINAL_4_GPIO_Port,SINAL_4_Pin,GPIO_PIN_RESET);
 
   /* USER CODE END 2 */
 
@@ -341,6 +314,43 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief CAN Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CAN_Init(void)
+{
+
+  /* USER CODE BEGIN CAN_Init 0 */
+
+  /* USER CODE END CAN_Init 0 */
+
+  /* USER CODE BEGIN CAN_Init 1 */
+
+  /* USER CODE END CAN_Init 1 */
+  hcan.Instance = CAN1;
+  hcan.Init.Prescaler = 4;
+  hcan.Init.Mode = CAN_MODE_NORMAL;
+  hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_15TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_2TQ;
+  hcan.Init.TimeTriggeredMode = DISABLE;
+  hcan.Init.AutoBusOff = ENABLE;
+  hcan.Init.AutoWakeUp = DISABLE;
+  hcan.Init.AutoRetransmission = ENABLE;
+  hcan.Init.ReceiveFifoLocked = DISABLE;
+  hcan.Init.TransmitFifoPriority = DISABLE;
+  if (HAL_CAN_Init(&hcan) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN CAN_Init 2 */
+
+  /* USER CODE END CAN_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -363,7 +373,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, BUZZER_Pin|SINAL_2_Pin|SINAL_3_Pin|SINAL_4_Pin
-                          |LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
+                          |LED_CAN_Pin|LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SINAL_1_GPIO_Port, SINAL_1_Pin, GPIO_PIN_RESET);
@@ -382,9 +392,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : BUZZER_Pin SINAL_2_Pin SINAL_3_Pin SINAL_4_Pin
-                           LED_STATUS_EXTERNO_Pin */
+                           LED_CAN_Pin LED_STATUS_EXTERNO_Pin */
   GPIO_InitStruct.Pin = BUZZER_Pin|SINAL_2_Pin|SINAL_3_Pin|SINAL_4_Pin
-                          |LED_STATUS_EXTERNO_Pin;
+                          |LED_CAN_Pin|LED_STATUS_EXTERNO_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -435,9 +445,10 @@ void ControlarCanal(
     }
 
     /*
-     * Só aceita a mudança depois de 30 ms
+     * Só aceita a mudança depois do tempo estabelecido configuradi inicial para 30ms ( >= 30)ms
      * sem alteração na leitura.
      */
+    /* Para mudar o tempo modificar */
     if ((HAL_GetTick() - *tempoDebounce) >= 30)
     {
         if (leituraAtual != *estadoEstavel)
@@ -445,7 +456,7 @@ void ControlarCanal(
             *estadoEstavel = leituraAtual;
 
             /*
-             * Como o botão usa pull-up,
+             * o botão usa pull-up,
              * RESET representa botão pressionado.
              */
             if (*estadoEstavel == GPIO_PIN_RESET)
@@ -461,9 +472,7 @@ void ControlarCanal(
                         : GPIO_PIN_RESET
                 );
 
-                /*
-                 * Se o novo estado for ligado,
-                 * salva o instante e aciona o evento do buzzer.
+                /*Se o novo estado for ligado, salva o instante e aciona o evento do buzzer.
                  */
                 if (*estadoRele == 1)
                 {
@@ -474,17 +483,13 @@ void ControlarCanal(
         }
     }
 
-    /*
-     * Guarda a leitura atual para a próxima
-     * execução da função.
-     */
-    /*
-     * Se o relé estiver ligado e completar 10 segundos,
-     * desliga automaticamente.
-     */
+    /* Guarda a leitura atual para a próximaexecução da função.*/
+    /*Se o relé estiver ligado e completar 10 segundos, desliga automaticamente.*/
+
+    /*MUDAR O TEMPO PARA DESLIGAR O RELE DAS SINALEIRAS ESTÁ COM 1 MINUT*/
     if (
         *estadoRele == 1 &&
-        (HAL_GetTick() - *tempoInicioRele) >= 10000
+        (HAL_GetTick() - *tempoInicioRele) >= 60000
     )
     {
         *estadoRele = 0;
