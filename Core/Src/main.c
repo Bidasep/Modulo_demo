@@ -102,6 +102,8 @@ void ControlarCanal(
 	uint32_t *tempoInicioRele
 );
 
+void Inicializacao(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -376,6 +378,9 @@ static void MX_GPIO_Init(void)
                           |LED_CAN_Pin|LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SINAL_1_GPIO_Port, SINAL_1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : LED_STATUS_Pin LED_POWER_Pin */
@@ -391,10 +396,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BUZZER_Pin SINAL_2_Pin SINAL_3_Pin SINAL_4_Pin
-                           LED_CAN_Pin LED_STATUS_EXTERNO_Pin */
-  GPIO_InitStruct.Pin = BUZZER_Pin|SINAL_2_Pin|SINAL_3_Pin|SINAL_4_Pin
-                          |LED_CAN_Pin|LED_STATUS_EXTERNO_Pin;
+  /*Configure GPIO pins : BUZZER_Pin LED_ERRO_Pin SINAL_2_Pin SINAL_3_Pin
+                           SINAL_4_Pin LED_CAN_Pin LED_STATUS_EXTERNO_Pin */
+  GPIO_InitStruct.Pin = BUZZER_Pin|LED_ERRO_Pin|SINAL_2_Pin|SINAL_3_Pin
+                          |SINAL_4_Pin|LED_CAN_Pin|LED_STATUS_EXTERNO_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -503,6 +508,39 @@ void ControlarCanal(
 
 
     *ultimaLeitura = leituraAtual;
+}
+
+void Inicializacao(){
+
+    /* Acende todos os LEDs */
+    HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_RESET);
+    HAL_Delay(1000);
+    HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port, LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
+    HAL_Delay(1000);
+    HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, GPIO_PIN_RESET);
+    HAL_Delay(1000);
+    HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_RESET);
+    HAL_Delay(1000);
+
+    /* Apaga todos ao terminar o teste */
+    /* Piscar 5x todos os leds*/
+    int i;
+
+    for (i = 0; i<5; i++)
+    {
+		HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port, LED_STATUS_EXTERNO_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, GPIO_PIN_SET);
+		HAL_Delay(200);
+		HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port, LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, GPIO_PIN_RESET);
+		HAL_Delay(200);
+		}
 }
 
 /* USER CODE END 4 */
