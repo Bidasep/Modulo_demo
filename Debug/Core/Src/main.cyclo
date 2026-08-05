@@ -4,4 +4,4 @@
 ../Core/Src/main.c:360:13:MX_GPIO_Init	1
 ../Core/Src/main.c:426:6:ControlarCanal	8
 ../Core/Src/main.c:513:6:Inicializacao	2
-../Core/Src/main.c:551:6:Error_Handler	1
+../Core/Src/main.c:552:6:Error_Handler	1
