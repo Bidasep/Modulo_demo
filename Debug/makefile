@@ -52,6 +52,12 @@ default.size.stdout \
 OBJDUMP_LIST += \
 Modulo_Demo.list \
 
+OBJCOPY_HEX += \
+Modulo_Demo.hex \
+
+OBJCOPY_BIN += \
+Modulo_Demo.bin \
+
 
 # All Target
 all: main-build
@@ -75,12 +81,22 @@ Modulo_Demo.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
+Modulo_Demo.hex: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "Modulo_Demo.hex"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+Modulo_Demo.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "Modulo_Demo.bin"
+	@echo 'Finished building: $@'
+	@echo ' '
+
 # Other Targets
 clean:
-	-$(RM) Modulo_Demo.elf Modulo_Demo.list Modulo_Demo.map default.size.stdout
+	-$(RM) Modulo_Demo.bin Modulo_Demo.elf Modulo_Demo.hex Modulo_Demo.list Modulo_Demo.map default.size.stdout
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_HEX) $(OBJCOPY_BIN)
 
 fail-specified-linker-script-missing:
 	@echo 'Error: Cannot find the specified linker script. Check the linker settings in the build configuration.'

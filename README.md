@@ -20,8 +20,11 @@ A SINALEIRA ESTÁ CONFIGURADA PARA DESLIGAR EM 60 SEGUNDOS
 | LED_STATUS     | PC13 | LED integrado da Blue Pill  , PISCANDO SEMPRE
 | LED_POWER      | PC15 | LED de alimentação           LIGADO SEMPRE QUE INICIA O PROGRAMA
 | LED_STATUS_EXT | PB7  | LED externo de funcionamento está funcionando junto com o da blue Pill 
-| LED_CAN        | PB6  | Reservado para CAN           
-| BUZZER         | PB 12| BUZZER , LIGA QUANDO APERTA QUALQUER BOTÃO POR 3SEG DEPOIS DESLIGA
+| LED_CAN        | PB6  | Reservado para CAN 
+| LED_ERRO       | P13  | lED para simulação de possivel erro 
+| LED_M2         | PB15 | LED_MODULO_DEMO_CONECTADO <- nome do pino usar para o módulo 2
+| LED_M2         | PB6  | LED_MODULO_DEMO_STATUS < - nome do pino   usar par ao modulo 2
+| BUZZER         | PB 12| BUZZER , LIGA QUANDO APERTA QUALQUER BOTÃO POR 4 SEG DEPOIS DESLIGA
 
 *****RESERVADO PARA O CAN*****
 

@@ -52,6 +52,8 @@ CAN_HandleTypeDef hcan;
 	uint8_t eventoBotao = 0;
 	uint8_t buzzerLigado = 0;
 	uint32_t tempoInicioBuzzer = 0;
+	uint32_t tempoDesligarReles = 120000;
+	uint32_t tempoBuzzerLigado = 4000;
 
 	/*TEMPORIZADORES DOS RELES PARA DESLIGAR AUTMÁTICO*/
 	uint32_t tempoInicioRele1 = 0;
@@ -77,7 +79,10 @@ CAN_HandleTypeDef hcan;
 	uint32_t tempoDebounceBotao2 = 0;
 	uint32_t tempoDebounceBotao3 = 0;
 	uint32_t tempoDebounceBotao4 = 0;
+
 	uint32_t tempoLedStatus = 0;
+	uint32_t tempoLedStatus2 = 0;
+
 
 
 /* USER CODE END PV */
@@ -103,6 +108,8 @@ void ControlarCanal(
 );
 
 void Inicializacao(void);
+void desligarLeds(void);
+void ligarLeds(void);
 
 /* USER CODE END PFP */
 
@@ -148,13 +155,10 @@ int main(void)
   /*DEFINE O BUZZER COMO LOW*/
   HAL_GPIO_WritePin(BUZZER_GPIO_Port,BUZZER_Pin,GPIO_PIN_RESET);
 
+  Inicializacao();
+
   /*LED DE ENERGIA*/
   HAL_GPIO_WritePin(LED_POWER_GPIO_Port,LED_POWER_Pin,GPIO_PIN_RESET);
-
-  /*STATUS */
-  HAL_GPIO_WritePin(LED_STATUS_GPIO_Port,LED_STATUS_Pin,GPIO_PIN_SET);
-  /*LED EXTERNO*/
-  HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port,LED_STATUS_EXTERNO_Pin,GPIO_PIN_SET);
 
 
   /*FORÇA O  SINAL_1 COMEÇAR EM ZERO*/
@@ -237,8 +241,19 @@ int main(void)
 	              );
 	          }
 
+	          /*lED DE FUNCIONAMENTO MODULO 2*/
+	          if ((HAL_GetTick() - tempoLedStatus2) >= 400)
+	          {
+	              tempoLedStatus2 = HAL_GetTick();
 
-	         /*LOGICA DO BUZZER 3S*/
+	              HAL_GPIO_TogglePin(
+	            	LED_MODULO_DEMO_STATUS_GPIO_Port,
+					LED_MODULO_DEMO_STATUS_Pin
+	              );
+	          }
+
+
+	         /*LOGICA DO BUZZER PARA FICAR LIGADO X TEMPO*/
 	          if (eventoBotao == 1)
 	          {
 	              HAL_GPIO_WritePin(
@@ -255,7 +270,7 @@ int main(void)
 
 	          if (
 	              buzzerLigado == 1 &&
-	              (HAL_GetTick() - tempoInicioBuzzer) >= 3000
+	              (HAL_GetTick() - tempoInicioBuzzer) >= tempoBuzzerLigado
 	          )
 	          {
 	              HAL_GPIO_WritePin(
@@ -374,11 +389,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, LED_STATUS_Pin|LED_POWER_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, BUZZER_Pin|SINAL_2_Pin|SINAL_3_Pin|SINAL_4_Pin
-                          |LED_CAN_Pin|LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, BUZZER_Pin|LED_MODULO_DEMO_STATUS_Pin|LED_MODULO_DEMO_CONECTADO_Pin|SINAL_2_Pin
+                          |SINAL_3_Pin|SINAL_4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, LED_ERRO_Pin|LED_CAN_Pin|LED_STATUS_EXTERNO_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SINAL_1_GPIO_Port, SINAL_1_Pin, GPIO_PIN_RESET);
@@ -396,10 +411,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : BUZZER_Pin LED_ERRO_Pin SINAL_2_Pin SINAL_3_Pin
-                           SINAL_4_Pin LED_CAN_Pin LED_STATUS_EXTERNO_Pin */
-  GPIO_InitStruct.Pin = BUZZER_Pin|LED_ERRO_Pin|SINAL_2_Pin|SINAL_3_Pin
-                          |SINAL_4_Pin|LED_CAN_Pin|LED_STATUS_EXTERNO_Pin;
+  /*Configure GPIO pins : BUZZER_Pin LED_ERRO_Pin LED_MODULO_DEMO_STATUS_Pin LED_MODULO_DEMO_CONECTADO_Pin
+                           SINAL_2_Pin SINAL_3_Pin SINAL_4_Pin LED_CAN_Pin
+                           LED_STATUS_EXTERNO_Pin */
+  GPIO_InitStruct.Pin = BUZZER_Pin|LED_ERRO_Pin|LED_MODULO_DEMO_STATUS_Pin|LED_MODULO_DEMO_CONECTADO_Pin
+                          |SINAL_2_Pin|SINAL_3_Pin|SINAL_4_Pin|LED_CAN_Pin
+                          |LED_STATUS_EXTERNO_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -449,10 +466,7 @@ void ControlarCanal(
         *tempoDebounce = HAL_GetTick();
     }
 
-    /*
-     * Só aceita a mudança depois do tempo estabelecido configuradi inicial para 30ms ( >= 30)ms
-     * sem alteração na leitura.
-     */
+    /*Só aceita a mudança depois do tempo estabelecido configuradi inicial para 30ms ( >= 30)ms sem alteração na leitura.*/
     /* Para mudar o tempo modificar */
     if ((HAL_GetTick() - *tempoDebounce) >= 30)
     {
@@ -460,10 +474,7 @@ void ControlarCanal(
         {
             *estadoEstavel = leituraAtual;
 
-            /*
-             * o botão usa pull-up,
-             * RESET representa botão pressionado.
-             */
+            /* o botão usa pull-up,RESET representa botão pressionad */
             if (*estadoEstavel == GPIO_PIN_RESET)
             {
                 /* Alterna entre ligado e desligado */
@@ -491,19 +502,15 @@ void ControlarCanal(
     /* Guarda a leitura atual para a próximaexecução da função.*/
     /*Se o relé estiver ligado e completar 10 segundos, desliga automaticamente.*/
 
-    /*MUDAR O TEMPO PARA DESLIGAR O RELE DAS SINALEIRAS ESTÁ COM 1 MINUT*/
+    /*MUDAR O TEMPO PARA DESLIGAR O RELE DAS SINALEIRAS */
     if (
         *estadoRele == 1 &&
-        (HAL_GetTick() - *tempoInicioRele) >= 60000
+        (HAL_GetTick() - *tempoInicioRele) >= tempoDesligarReles
     )
     {
         *estadoRele = 0;
 
-        HAL_GPIO_WritePin(
-            relePort,
-            relePin,
-            GPIO_PIN_RESET
-        );
+        HAL_GPIO_WritePin(relePort,relePin,GPIO_PIN_RESET);
     }
 
 
@@ -512,35 +519,59 @@ void ControlarCanal(
 
 void Inicializacao(){
 
-    /* Acende todos os LEDs */
+	desligarLeds();
+
+    /* Acende todos os LEDs estilo cascata */
     HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_RESET);
-    HAL_Delay(1000);
+    HAL_Delay(1500);
+
+	HAL_GPIO_WritePin(LED_MODULO_DEMO_STATUS_GPIO_Port, LED_MODULO_DEMO_STATUS_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port, LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
-    HAL_Delay(1000);
+    HAL_Delay(1500);
+
+	HAL_GPIO_WritePin(LED_MODULO_DEMO_CONECTADO_GPIO_Port, LED_MODULO_DEMO_STATUS_Pin, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, GPIO_PIN_RESET);
-    HAL_Delay(1000);
+    HAL_Delay(1500);
+
     HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_RESET);
-    HAL_Delay(1000);
+    HAL_Delay(1500);
 
-    /* Apaga todos ao terminar o teste */
-    /* Piscar 5x todos os leds*/
-    int i;
+    /* Apaga todos ao terminar o "teste" */
+    desligarLeds();
 
-    for (i = 0; i<5; i++)
-    {
-		HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port, LED_STATUS_EXTERNO_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, GPIO_PIN_SET);
-		HAL_Delay(250);
-		HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port, LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, GPIO_PIN_RESET);
-		HAL_Delay(250);
+
+    /* Piscar 10x todos os leds*/
+
+    for (uint8_t i = 0; i < 30; i++){
+
+    	ligarLeds();
+		HAL_Delay(150);
+
+    	desligarLeds();
+		HAL_Delay(150);
+
 		}
+}
+
+/*Função para desligar todos os leds*/
+void ligarLeds(){
+    HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port, LED_STATUS_EXTERNO_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_MODULO_DEMO_STATUS_GPIO_Port, LED_MODULO_DEMO_STATUS_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_MODULO_DEMO_CONECTADO_GPIO_Port, LED_MODULO_DEMO_STATUS_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_RESET);
+}
+
+/*Funcao para ligar todos os leds*/
+void desligarLeds(){
+	HAL_GPIO_WritePin(LED_POWER_GPIO_Port, LED_POWER_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_STATUS_EXTERNO_GPIO_Port, LED_STATUS_EXTERNO_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_MODULO_DEMO_STATUS_GPIO_Port, LED_MODULO_DEMO_STATUS_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_MODULO_DEMO_CONECTADO_GPIO_Port, LED_MODULO_DEMO_STATUS_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_CAN_GPIO_Port, LED_CAN_Pin, GPIO_PIN_SET);
+
 }
 
 /* USER CODE END 4 */
