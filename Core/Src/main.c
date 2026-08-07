@@ -32,6 +32,13 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define TEMPO_DESLIGAR_RELES_MS  120000
+#define TEMPO_RESET_SISTEMA_MS  8000
+#define TEMPO_BUZZER_LIGADO_MS 4000
+#define TEMPO_HEARTBEAT_NORMAL_MS 500
+#define TEMPO_HEARTBEAT_RAPIDO_MS 100
+#define TEMPO_ATIVIDADE_MS 3000
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,43 +52,51 @@ CAN_HandleTypeDef hcan;
 /* USER CODE BEGIN PV */
 /*DEFINIÇAO DE VARIAVES */
 
-	uint8_t estadoRele1 = 0;
-	uint8_t estadoRele2 = 0;
-	uint8_t estadoRele3 = 0;
-	uint8_t estadoRele4 = 0;
-	uint8_t eventoBotao = 0;
-	uint8_t buzzerLigado = 0;
-	uint32_t tempoInicioBuzzer = 0;
-	uint32_t tempoDesligarReles = 120000;
-	uint32_t tempoBuzzerLigado = 4000;
+uint8_t estadoRele1 = 0;
+uint8_t estadoRele2 = 0;
+uint8_t estadoRele3 = 0;
+uint8_t estadoRele4 = 0;
+uint8_t eventoBotao = 0;
 
-	/*TEMPORIZADORES DOS RELES PARA DESLIGAR AUTMÁTICO*/
-	uint32_t tempoInicioRele1 = 0;
-	uint32_t tempoInicioRele2 = 0;
-	uint32_t tempoInicioRele3 = 0;
-	uint32_t tempoInicioRele4 = 0;
+uint8_t buzzerLigado = 0;
+uint32_t tempoInicioBuzzer = 0;
 
-	/* Estados usados no debounce */
-	GPIO_PinState ultimaLeituraBotao1 = GPIO_PIN_SET;
-	GPIO_PinState estadoEstavelBotao1 = GPIO_PIN_SET;
+uint32_t tempoUltimaAtividade = 0;
 
-	GPIO_PinState ultimaLeituraBotao2 = GPIO_PIN_SET;
-	GPIO_PinState estadoEstavelBotao2 = GPIO_PIN_SET;
 
-	GPIO_PinState ultimaLeituraBotao3 = GPIO_PIN_SET;
-	GPIO_PinState estadoEstavelBotao3 = GPIO_PIN_SET;
 
-	GPIO_PinState ultimaLeituraBotao4 = GPIO_PIN_SET;
-	GPIO_PinState estadoEstavelBotao4 = GPIO_PIN_SET;
+uint32_t tempoInicioReset = 0;
+uint32_t tempoPiscaReset = 0;
+uint8_t solicitarReset = 0;
 
-	/* Momento em que a leitura do botão mudou */
-	uint32_t tempoDebounceBotao1 = 0;
-	uint32_t tempoDebounceBotao2 = 0;
-	uint32_t tempoDebounceBotao3 = 0;
-	uint32_t tempoDebounceBotao4 = 0;
 
-	uint32_t tempoLedStatus = 0;
-	uint32_t tempoLedStatus2 = 0;
+/*TEMPORIZADORES DOS RELES PARA DESLIGAR AUTMÁTICO*/
+uint32_t tempoInicioRele1 = 0;
+uint32_t tempoInicioRele2 = 0;
+uint32_t tempoInicioRele3 = 0;
+uint32_t tempoInicioRele4 = 0;
+
+/* Estados usados no debounce */
+GPIO_PinState ultimaLeituraBotao1 = GPIO_PIN_SET;
+GPIO_PinState estadoEstavelBotao1 = GPIO_PIN_SET;
+
+GPIO_PinState ultimaLeituraBotao2 = GPIO_PIN_SET;
+GPIO_PinState estadoEstavelBotao2 = GPIO_PIN_SET;
+
+GPIO_PinState ultimaLeituraBotao3 = GPIO_PIN_SET;
+GPIO_PinState estadoEstavelBotao3 = GPIO_PIN_SET;
+
+GPIO_PinState ultimaLeituraBotao4 = GPIO_PIN_SET;
+GPIO_PinState estadoEstavelBotao4 = GPIO_PIN_SET;
+
+/* Momento em que a leitura do botão mudou */
+uint32_t tempoDebounceBotao1 = 0;
+uint32_t tempoDebounceBotao2 = 0;
+uint32_t tempoDebounceBotao3 = 0;
+uint32_t tempoDebounceBotao4 = 0;
+
+uint32_t tempoLedStatus = 0;
+uint32_t tempoLedStatus2 = 0;
 
 
 
@@ -159,6 +174,7 @@ int main(void)
 
   /*LED DE ENERGIA*/
   HAL_GPIO_WritePin(LED_POWER_GPIO_Port,LED_POWER_Pin,GPIO_PIN_RESET);
+  HAL_Delay(1000);
 
 
   /*FORÇA O  SINAL_1 COMEÇAR EM ZERO*/
@@ -224,63 +240,92 @@ int main(void)
 			  &tempoInicioRele1
 	      );
 
-	      /* Pisca o LED de funcionamento a cada 500 ms */
-	          if ((HAL_GetTick() - tempoLedStatus) >= 500)
-	          {
-	              tempoLedStatus = HAL_GetTick();
+	      /*Reset do módulo está com o botão 1 e 4 pressionados simultaneamente */
+		if (HAL_GPIO_ReadPin(BOTAO_1_GPIO_Port, BOTAO_1_Pin) == GPIO_PIN_RESET
+				&& HAL_GPIO_ReadPin(BOTAO_4_GPIO_Port, BOTAO_4_Pin)
+						== GPIO_PIN_RESET) {
+			if (solicitarReset == 0) {
+				solicitarReset = 1;
 
-	              HAL_GPIO_TogglePin(
-	                  LED_STATUS_GPIO_Port,
-	                  LED_STATUS_Pin
-	              );
+				tempoInicioReset = HAL_GetTick();
+				tempoPiscaReset = HAL_GetTick();
+			}
 
-	              /* LED externo de funcionamento */
-	              HAL_GPIO_TogglePin(
-	                  LED_STATUS_EXTERNO_GPIO_Port,
-	                  LED_STATUS_EXTERNO_Pin
-	              );
-	          }
+			/* Pisca LED_ERRO a cada 250 ms */
+			if ((HAL_GetTick() - tempoPiscaReset) >= 250) {
+				tempoPiscaReset = HAL_GetTick();
 
-	          /*lED DE FUNCIONAMENTO MODULO 2*/
-	          if ((HAL_GetTick() - tempoLedStatus2) >= 400)
-	          {
-	              tempoLedStatus2 = HAL_GetTick();
+				HAL_GPIO_TogglePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin);
+			}
 
-	              HAL_GPIO_TogglePin(
-	            	LED_MODULO_DEMO_STATUS_GPIO_Port,
-					LED_MODULO_DEMO_STATUS_Pin
-	              );
-	          }
+			/* Mantidos por 8 segundos */
+			if ((HAL_GetTick() - tempoInicioReset) >= TEMPO_RESET_SISTEMA_MS) {
+				NVIC_SystemReset();
+			}
+		} else {
+			/* Algum dos botões foi solto antes dos 8 segundos. Cancela o pedido de reset.*/
+			solicitarReset = 0;
+
+			/* LED_ERRO ativo em LOW: SET = apagado */
+			HAL_GPIO_WritePin(LED_ERRO_GPIO_Port, LED_ERRO_Pin, GPIO_PIN_SET);
+		}
+
+		 /*Definir a frequencia do led comforme atividade */
+	      uint32_t intervaloHeartbeat;
+
+	      if ((HAL_GetTick() - tempoUltimaAtividade) < TEMPO_ATIVIDADE_MS)
+	      {
+	          intervaloHeartbeat = TEMPO_HEARTBEAT_RAPIDO_MS;
+	      }
+	      else
+	      {
+	          intervaloHeartbeat = TEMPO_HEARTBEAT_NORMAL_MS;
+	      }
 
 
-	         /*LOGICA DO BUZZER PARA FICAR LIGADO X TEMPO*/
-	          if (eventoBotao == 1)
-	          {
-	              HAL_GPIO_WritePin(
-	                  BUZZER_GPIO_Port,
-	                  BUZZER_Pin,
-	                  GPIO_PIN_SET
-	              );
+		/* Pisca o LED de funcionamento conforme a atividade inativo 500ms , ativo 200 ms */
+		if ((HAL_GetTick() - tempoLedStatus) >= intervaloHeartbeat) {
+			tempoLedStatus = HAL_GetTick();
 
-	              buzzerLigado = 1;
-	              tempoInicioBuzzer = HAL_GetTick();
+			HAL_GPIO_TogglePin(
+			LED_STATUS_GPIO_Port,
+			LED_STATUS_Pin);
 
-	              eventoBotao = 0;
-	          }
+			/* LED externo */
+			HAL_GPIO_TogglePin(
+			LED_STATUS_EXTERNO_GPIO_Port,
+			LED_STATUS_EXTERNO_Pin);
+		}
 
-	          if (
-	              buzzerLigado == 1 &&
-	              (HAL_GetTick() - tempoInicioBuzzer) >= tempoBuzzerLigado
-	          )
-	          {
-	              HAL_GPIO_WritePin(
-	                  BUZZER_GPIO_Port,
-	                  BUZZER_Pin,
-	                  GPIO_PIN_RESET
-	              );
+		/*lED DE FUNCIONAMENTO MODULO 2*/
+		if ((HAL_GetTick() - tempoLedStatus2) >= 400) {
+			tempoLedStatus2 = HAL_GetTick();
 
-	              buzzerLigado = 0;
-	          }
+			HAL_GPIO_TogglePin(
+			LED_MODULO_DEMO_STATUS_GPIO_Port,
+			LED_MODULO_DEMO_STATUS_Pin);
+		}
+
+		/*LOGICA DO BUZZER PARA FICAR LIGADO X TEMPO*/
+		if (eventoBotao == 1) {
+			HAL_GPIO_WritePin(
+			BUZZER_GPIO_Port,
+			BUZZER_Pin, GPIO_PIN_SET);
+
+			buzzerLigado = 1;
+			tempoInicioBuzzer = HAL_GetTick();
+
+			eventoBotao = 0;
+		}
+
+		if (buzzerLigado == 1
+				&& (HAL_GetTick() - tempoInicioBuzzer) >= TEMPO_BUZZER_LIGADO_MS) {
+			HAL_GPIO_WritePin(
+			BUZZER_GPIO_Port,
+			BUZZER_Pin, GPIO_PIN_RESET);
+
+			buzzerLigado = 0;
+		}
 
     /* USER CODE END WHILE */
 
@@ -461,60 +506,48 @@ void ControlarCanal(
      * Se a leitura mudou, reinicia o tempo
      * necessário para o debounce.
      */
-    if (leituraAtual != *ultimaLeitura)
-    {
-        *tempoDebounce = HAL_GetTick();
-    }
+	if (leituraAtual != *ultimaLeitura) {
+		*tempoDebounce = HAL_GetTick();
+	}
 
-    /*Só aceita a mudança depois do tempo estabelecido configuradi inicial para 30ms ( >= 30)ms sem alteração na leitura.*/
-    /* Para mudar o tempo modificar */
-    if ((HAL_GetTick() - *tempoDebounce) >= 30)
-    {
-        if (leituraAtual != *estadoEstavel)
-        {
-            *estadoEstavel = leituraAtual;
+	/*Só aceita a mudança depois do tempo estabelecido configuradi inicial para 30ms ( >= 30)ms sem alteração na leitura.*/
+	/* Para mudar o tempo modificar */
+	if ((HAL_GetTick() - *tempoDebounce) >= 30) {
+		if (leituraAtual != *estadoEstavel) {
+			*estadoEstavel = leituraAtual;
 
-            /* o botão usa pull-up,RESET representa botão pressionad */
-            if (*estadoEstavel == GPIO_PIN_RESET)
-            {
-                /* Alterna entre ligado e desligado */
-                *estadoRele = !(*estadoRele);
+			/* o botão usa pull-up,RESET representa botão pressionad */
+			if (*estadoEstavel == GPIO_PIN_RESET) {
+				/* Alterna entre ligado e desligado */
+				*estadoRele = !(*estadoRele);
 
-                HAL_GPIO_WritePin(
-                    relePort,
-                    relePin,
-                    *estadoRele
-                        ? GPIO_PIN_SET
-                        : GPIO_PIN_RESET
-                );
+				HAL_GPIO_WritePin(relePort, relePin,
+						*estadoRele ? GPIO_PIN_SET : GPIO_PIN_RESET);
+				/*começa a contar o tempo do HEARTBEAT*/
+				tempoUltimaAtividade = HAL_GetTick();
 
-                /*Se o novo estado for ligado, salva o instante e aciona o evento do buzzer.
-                 */
-                if (*estadoRele == 1)
-                {
-                    *tempoInicioRele = HAL_GetTick();
-                    eventoBotao = 1;
-                }
-            }
-        }
-    }
+				/*Se o novo estado for ligado, salva o instante e aciona o evento do buzzer.
+				 */
+				if (*estadoRele == 1) {
+					*tempoInicioRele = HAL_GetTick();
+					eventoBotao = 1;
+				}
+			}
+		}
+	}
 
     /* Guarda a leitura atual para a próximaexecução da função.*/
     /*Se o relé estiver ligado e completar 10 segundos, desliga automaticamente.*/
 
     /*MUDAR O TEMPO PARA DESLIGAR O RELE DAS SINALEIRAS */
-    if (
-        *estadoRele == 1 &&
-        (HAL_GetTick() - *tempoInicioRele) >= tempoDesligarReles
-    )
-    {
-        *estadoRele = 0;
+	if (*estadoRele == 1
+			&& (HAL_GetTick() - *tempoInicioRele) >= TEMPO_DESLIGAR_RELES_MS) {
+		*estadoRele = 0;
 
-        HAL_GPIO_WritePin(relePort,relePin,GPIO_PIN_RESET);
-    }
+		HAL_GPIO_WritePin(relePort, relePin, GPIO_PIN_RESET);
+	}
 
-
-    *ultimaLeitura = leituraAtual;
+	*ultimaLeitura = leituraAtual;
 }
 
 void Inicializacao(){
@@ -540,17 +573,20 @@ void Inicializacao(){
     desligarLeds();
 
 
+
+
     /* Piscar 10x todos os leds*/
 
-    for (uint8_t i = 0; i < 30; i++){
+	for (uint8_t i = 0; i < 30; i++) {
 
-    	ligarLeds();
-		HAL_Delay(150);
+		ligarLeds();
+		HAL_Delay(100);
 
-    	desligarLeds();
-		HAL_Delay(150);
+		desligarLeds();
+		HAL_Delay(100);
 
-		}
+	}
+	HAL_Delay(1000);
 }
 
 /*Função para desligar todos os leds*/
